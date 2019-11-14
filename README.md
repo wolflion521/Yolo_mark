@@ -100,4 +100,6 @@ Shortcut | Description |
 <kbd>w</kbd> | Line width |
 <kbd>k</kbd> | Hide object name |
 <kbd>h</kbd> | Help |
+<kbd>a</kbd> | auto select or switch box |
+<kbd>b</kbd> | turn on class label mode, change box to another class| 
 

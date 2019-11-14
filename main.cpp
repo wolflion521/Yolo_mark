@@ -183,6 +183,7 @@ std::atomic<int> mark_line_width(2); // default mark line width is 2 pixels.
 const int MAX_MARK_LINE_WIDTH = 3;
 std::atomic<bool> show_mark_class(true);
 std::atomic<bool> delete_selected(false);
+std::atomic<bool> change_class_id(false);
 
 std::atomic<int> x_start, y_start;
 std::atomic<int> x_end, y_end;
@@ -496,8 +497,8 @@ int main(int argc, char *argv[])
 		std::string const trackbar_name_2 = "object id";
 		int const max_object_id = (synset_txt.size() > 0) ? synset_txt.size() : 20;
 		int tb_res_2 = createTrackbar(trackbar_name_2, window_name, &current_obj_id, max_object_id);
-
-
+		int auto_selected_id = -1;
+		
 		do {
 			//trackbar_value = min(max(0, trackbar_value), (int)jpg_filenames_path.size() - 1);
 
@@ -633,8 +634,8 @@ int main(int argc, char *argv[])
 
 				marks_changed = false;
 
-				rectangle(frame, prev_img_rect, Scalar(100, 100, 100), CV_FILLED);
-				rectangle(frame, next_img_rect, Scalar(100, 100, 100), CV_FILLED);
+				cv::rectangle(frame, prev_img_rect, Scalar(100, 100, 100), CV_FILLED);
+				cv::rectangle(frame, next_img_rect, Scalar(100, 100, 100), CV_FILLED);
 			}
 
 			trackbar_value = min(max(0, trackbar_value), (int)jpg_filenames_path.size() - 1);
@@ -647,7 +648,7 @@ int main(int argc, char *argv[])
 				Scalar color(100, 70, 100);
 				if (i == 0) color = Scalar(250, 120, 150);
 				if (y_end < preview.rows && i == (x_end - prev_img_rect.width) / preview.cols) color = Scalar(250, 200, 200);
-				rectangle(frame, rect_dst, color, 2);
+				cv::rectangle(frame, rect_dst, color, 2);
 			}
 
 			if (undo) {
@@ -730,7 +731,7 @@ int main(int argc, char *argv[])
 					Rect selected_rect(
 						Point2i(max(0, (int)min(x_start, x_end)), max(preview.rows, (int)min(y_start, y_end))),
 						Point2i(max(x_start, x_end), max(y_start, y_end)));
-					rectangle(frame, selected_rect, Scalar(150, 200, 150));
+					cv::rectangle(frame, selected_rect, Scalar(150, 200, 150));
 
 					if (show_mark_class)
 					{
@@ -810,11 +811,19 @@ int main(int argc, char *argv[])
                     (i.abs_rect.y + preview.rows) < y_end && (i.abs_rect.y + i.abs_rect.height + preview.rows) > y_end)
                 {
                     if (selected_id < 0) {
+						//std::cout << selected_id << std::endl;
                         color_rect = Scalar(100, 200, 300);
                         selected_id = k;
-                        rectangle(full_image_roi, i.abs_rect, color_rect, mark_line_width*2);
+						//std::cout << selected_id << std::endl;
+						cv::rectangle(full_image_roi, i.abs_rect, color_rect, mark_line_width*2);
                     }
                 }
+				else if (k == auto_selected_id) {
+					color_rect = Scalar(100, 200, 300);
+					selected_id = k;
+					//std::cout << selected_id << std::endl;
+					cv::rectangle(full_image_roi, i.abs_rect, color_rect, mark_line_width * 2);
+				}
 
 				if (show_mark_class)
 				{
@@ -822,7 +831,7 @@ int main(int argc, char *argv[])
 						i.abs_rect.tl() + Point2f(2, 22), FONT_HERSHEY_SIMPLEX, 0.8, color_rect, 2);
 				}
 
-				rectangle(full_image_roi, i.abs_rect, color_rect, mark_line_width);
+				cv::rectangle(full_image_roi, i.abs_rect, color_rect, mark_line_width);
 			}
             
             // remove selected rect
@@ -830,6 +839,15 @@ int main(int argc, char *argv[])
                 delete_selected = false;
                 if (selected_id >= 0) current_coord_vec.erase(current_coord_vec.begin() + selected_id);
             }
+			if (change_class_id ) {
+				change_class_id = false;
+				if (selected_id >= 0) {
+					current_coord_vec[selected_id].id = current_obj_id;
+				}
+				/*else if (auto_selected_id >= 0) {
+					current_coord_vec[auto_selected_id].id = current_obj_id;
+				}*/
+			}
 
             // show moving rect
             if (right_button_click == true)
@@ -843,7 +861,7 @@ int main(int argc, char *argv[])
                 rect.y += y_delta;
 
                 Scalar color_rect = Scalar(300, 200, 100);
-                rectangle(full_image_roi, rect, color_rect, mark_line_width);
+				cv::rectangle(full_image_roi, rect, color_rect, mark_line_width);
             }
 
             // complete moving label rect
@@ -991,6 +1009,17 @@ int main(int argc, char *argv[])
             case 1048690:   // r
                 delete_selected = true;
                 break;
+			case 'b':
+				std::cout << "b is pressed, means you want to change the class number of a label" << std::endl;
+				change_class_id = true;
+				break;
+			case 'a':
+				
+				auto_selected_id = (auto_selected_id+1);
+				if (auto_selected_id == current_coord_vec.size()) {
+					auto_selected_id = -1;
+				}
+				std::cout << "auto select "<< auto_selected_id <<" box" << std::endl;
 			default:
 				;
 			}
